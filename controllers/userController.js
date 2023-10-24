@@ -57,7 +57,7 @@ const userLogin = async (req, res) => {
     },
   ]})
   //const rolePermission = foundUser.Role.RolePermission
-  //console.log("User Role = ", foundUser.Role);
+  console.log("User Role = ", foundUser.Role);
   const userAllPermissions = await foundUser.Role.getUserPermissions();
   const perms = userAllPermissions? userAllPermissions.map(permission => permission.perm_name) : "";
   //console.log("User is here = ", foundUser)

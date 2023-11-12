@@ -49,6 +49,7 @@ const userLogin = async (req, res) => {
     return res
       .status(400)
       .json({ message: "Username and password are required." });
+  console.log("Admin Login ", req)
     //const foundUser = usersDB.users.find((person) => person.username === user);
   const foundUser = await User.findOne({where:{email: req.body.email},
     include: [
@@ -61,7 +62,7 @@ const userLogin = async (req, res) => {
   const userAllPermissions = await foundUser.Role.getUserPermissions();
   const perms = userAllPermissions? userAllPermissions.map(permission => permission.perm_name) : "";
   //console.log("User is here = ", foundUser)
-  if (!foundUser) return res.status(401).json({message:"Unauthorized! Username/Password is invalid"}); //Unauthorized
+  if (!foundUser) return res.status(403).json({message:"Unauthorized! Username/Password is invalid"}); //Unauthorized
   // evaluate password
   const match = await bcrypt.compare(password, foundUser.password);
   if (match) {
@@ -108,9 +109,9 @@ const userLogin = async (req, res) => {
         return res.status(403).send({message:"Unable to generate refresh token"})
     }
    
-    res.status(200).json({ accessToken });
+    res.status(200).json({ accessToken,user:jwtUserProfile });
   } else {
-    res.status(401).json({message:"Unauthorized"});
+    res.status(403).json({message:"Unauthorized"});
   }       
 }
 
@@ -138,8 +139,33 @@ const getRefreshToken = async (req, res) => {
   });
 };
 
+const logoutUser = async(req, res) => {
+    const userId = req.user.id    
+    console.log("user userId", userId);
+    const userObj = await User.findOne({where:{id: userId}})
+    console.log("Logout User DB found", userObj);
+ 
+    //console.log("Found user", foundUser);
+    if (!userObj) return res.status(403).json({message:"UnAuthorized access"}); //Forbidden
+    //erasing refresh tokens with current user
+      
+    const updateRec = {
+      refreshToken: null,      
+      name: userObj.name,
+      email: userObj.email
+   }
+    const updateRes = User.update(updateRec, { where:{id:userObj.id}})
+    if(updateRes){
+      res.cookie('jwt', '', {
+        httpOnly: true,
+        expires: new Date(0),
+      });
+      res.status(200).json({ message: 'Logged out successfully' });     
+    };
+}
 module.exports = {
     signUp,
     userLogin,
+    logoutUser,
     getRefreshToken
 }
